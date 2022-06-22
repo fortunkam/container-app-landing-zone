@@ -4,7 +4,8 @@ Landing Zone for Container Apps (Network Restricted)
 ## Project objectives
 
 - [ ] No public endpoints
-- [ ] VNET Connected
+- [ ] Hub and Spoke VNETSs
+- [ ] VNET Connected Container App Environment
 - [ ] Firewall for egress
 - [ ] VPN for testing (or jump box/Bastion)
 - [ ] APIM for external API access?
@@ -17,3 +18,5 @@ Landing Zone for Container Apps (Network Restricted)
 - [ ] Dapr Internal Service Call
 - [ ] Dapr External Service Call
 - [ ] Keda Scaling
+- [ ] GitHub Actions for deploying apps
+
