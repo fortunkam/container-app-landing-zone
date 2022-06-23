@@ -1,47 +1,62 @@
 param resourcePrefix string
 param resourceGroupLocation string = resourceGroup().location
 
-param vnetAddressSpace string = '192.168.0.0/21'
+var hubResourcePrefix = '${resourcePrefix}-hub'
+
+param hubVnetAddressSpace string = '192.168.0.0/21'
 param firewallSubnetAddressSpace string = '192.168.0.0/24'
 param vpnSubnetAddressSpace string = '192.168.1.0/24'
 param apimSubnetAddressSpace string = '192.168.2.0/24'
 
-// Spoke space will be at 192.168.8.0/21
 
 resource hub_vnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
-  name : '${resourcePrefix}-vnet'
+  name : '${hubResourcePrefix}-vnet'
   location : resourceGroupLocation
   properties : {
     addressSpace : {
       addressPrefixes : [
-        vnetAddressSpace
+        hubVnetAddressSpace
       ]
     }
+    subnets: [
+      {
+        name: 'AzureFirewallSubnet'
+        properties: {
+          addressPrefix: firewallSubnetAddressSpace
+        }
+      }
+      {
+        name: 'GatewaySubnet'
+        properties: {
+          addressPrefix: vpnSubnetAddressSpace
+        }
+      }
+      {
+        name: 'APIMSubnet'
+        properties: {
+          addressPrefix: apimSubnetAddressSpace
+        }
+      }
+    ]
   }
 }
 
-resource firewallSubnet 'Microsoft.Network/virtualNetworks/subnets@2021-08-01' = {
-  name: 'AzureFirewallSubnet'
-  parent: hub_vnet
-  properties: {
-    addressPrefix: firewallSubnetAddressSpace
+module firewall_deploy 'firewall.bicep' = {
+  name: '${resourcePrefix}-firewall-deploy'
+  params: {
+    resourcePrefix:  '${resourcePrefix}-firewall'
+    resourceGroupLocation: resourceGroupLocation
+    firewallSubnetId: hub_vnet.properties.subnets[0].id
   }
 }
 
-resource vpnSubnet 'Microsoft.Network/virtualNetworks/subnets@2021-08-01' = {
-  name: 'GatewaySubnet'
-  parent: hub_vnet
-  properties: {
-    addressPrefix: vpnSubnetAddressSpace
-  }
-}
 
-resource apimSubnet 'Microsoft.Network/virtualNetworks/subnets@2021-08-01' = {
-  name: 'APIMSubnet'
-  parent: hub_vnet
-  properties: {
-    addressPrefix: apimSubnetAddressSpace
-  }
-}
+output vnetName string = hub_vnet.name
+output vnetId string = hub_vnet.id
+output firewall_ip_address string = firewall_deploy.outputs.firewall_ip_address
+
+
+
+
 
 

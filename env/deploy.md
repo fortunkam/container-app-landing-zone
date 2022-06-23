@@ -9,10 +9,11 @@ It will create the following resources:
     - [x] VPN Subnet (/24)
     - [x] APIM Subnet (/24)
 - [x] Spoke VNET (/21)
-    - [x] Container Apps Subnet (/23)
-- [ ] VNET Pairing (for Hub and Spoke)
+    - [x] Container Apps Infrastructure Subnet (/23)
+    - [x] Container Apps Runtime Subnet (/23)
+- [x] VNET Pairing (for Hub and Spoke)
 - [ ] Container App Environment
-- [ ] Firewall
+- [x] Firewall
 - [ ] VPN
 - [ ] APIM
 - [ ] Key Vault

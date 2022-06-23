@@ -18,5 +18,6 @@ Landing Zone for Container Apps (Network Restricted)
 - [ ] Dapr Internal Service Call
 - [ ] Dapr External Service Call
 - [ ] Keda Scaling
+- [ ] App Insights and Log Analytics everywhere
 - [ ] GitHub Actions for deploying apps
 

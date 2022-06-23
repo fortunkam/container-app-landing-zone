@@ -1,7 +1,7 @@
 targetScope = 'subscription'
 
 param resourcePrefix string = 'mfca'
-param resourceGroupLocation string = 'westeurope'
+param resourceGroupLocation string = deployment().location
 
 
 resource hub_rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
@@ -14,26 +14,54 @@ resource spoke_rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   location : resourceGroupLocation
 }
 
-// HUB
+// NETWORK
 
-module hub_mod 'hub.bicep' = {
-  name: '${resourcePrefix}-hub-resources'
+module hub_network 'hub-network.bicep' = {
+  name: '${resourcePrefix}-hub-network'
   scope: hub_rg
   params: {
-    resourcePrefix:  '${resourcePrefix}-hub'
+    resourcePrefix:  resourcePrefix
     resourceGroupLocation: resourceGroupLocation
   }
 }
 
-// SPOKE
-
-module spoke_mod 'spoke.bicep' = {
-  name: '${resourcePrefix}-spoke-resources'
+module spoke_network 'spoke-network.bicep' = {
+  name: '${resourcePrefix}-spoke-network'
   scope: spoke_rg
   params: {
-    resourcePrefix:  '${resourcePrefix}-spoke'
+    resourcePrefix:  resourcePrefix
     resourceGroupLocation: resourceGroupLocation
+    firewallIpAddress: hub_network.outputs.firewall_ip_address
   }
 }
+
+module hub_to_spoke_peering 'vnetpeering.bicep' = {
+  name: '${resourcePrefix}-hub-peering'
+  scope: hub_rg
+  params: {
+    vnet1Name: hub_network.outputs.vnetName
+    vnet2ResourceId: spoke_network.outputs.vnetId
+    peeringName: 'peer-${hub_network.outputs.vnetName}-${spoke_network.outputs.vnetName}'
+    allowForwardedTraffic : false
+    useRemoteGateways : false
+    allowGatewayTransit : true
+  }
+}
+
+module spoke_to_hub_peering 'vnetpeering.bicep' = {
+  name: '${resourcePrefix}-spoke-peering'
+  scope: spoke_rg
+  params: {
+    vnet1Name: spoke_network.outputs.vnetName
+    vnet2ResourceId: hub_network.outputs.vnetId
+    peeringName: 'peer-${spoke_network.outputs.vnetName}-${hub_network.outputs.vnetName}'
+    allowForwardedTraffic : false
+    useRemoteGateways : false
+    allowGatewayTransit : true
+  }
+  dependsOn: [ hub_to_spoke_peering ]
+}
+
+
 
 
