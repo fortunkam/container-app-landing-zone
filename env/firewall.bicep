@@ -1,6 +1,7 @@
 param resourcePrefix string
 param resourceGroupLocation string = resourceGroup().location
 param firewallSubnetId string
+param logAnalyticsWorkspaceId string
 
 resource ip 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
   name: '${resourcePrefix}-ip'
@@ -36,12 +37,46 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
     ruleCollections: [
       {
         ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
-        name: 'containerapps-outbound-ntp'
+        name: 'aks-outbound-azure-global'
         action: {
           type: 'Allow'
         }
         rules: [
           {
+            name: 'udp-vpn-azureglobal'
+            ruleType: 'NetworkRule'
+            destinationAddresses: [
+              'AzureCloud.${resourceGroupLocation}'
+            ]
+            destinationPorts: [
+              '1194'
+            ]
+            ipProtocols: [
+              'UDP'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+          }
+          {
+            name: 'tcp-vpn-azureglobal'
+            ruleType: 'NetworkRule'
+            destinationAddresses: [
+              'AzureCloud.${resourceGroupLocation}'
+            ]
+            destinationPorts: [
+              '9000'
+              '22'
+            ]
+            ipProtocols: [
+              'TCP'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+          }
+          {
+            name: 'ntp-ubuntu'
             ruleType: 'NetworkRule'
             destinationFqdns: [
               'ntp.ubuntu.com'
@@ -56,8 +91,24 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
               '*'
             ]
           }
+          {
+            name: 'azuremonitor'
+            ruleType: 'NetworkRule'
+            destinationAddresses: [
+              'AzureMonitor'
+            ]
+            destinationPorts: [
+              '443'
+            ]
+            ipProtocols: [
+              'TCP'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+          }
         ]
-        priority: 150
+        priority: 140
       }
       {
         name: 'containerapps-outbound-fqdn'
@@ -68,6 +119,7 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
         priority: 200
         rules: [
           {
+            name: 'container-apps'
             ruleType: 'ApplicationRule'
             targetFqdns: [
               '*.hcp.${resourceGroupLocation}.azmk8s.io'
@@ -81,6 +133,17 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
               '*.ods.opinsights.azure.com'
               '*.oms.opinsights.azure.com'
               '*.monitoring.azure.com'
+              'vault.azure.net'
+              'data.policy.core.windows.net'
+              'store.policy.core.windows.net'
+              'dc.services.visualstudio.com'
+              '${resourceGroupLocation}.dp.kubernetesconfiguration.azure.com'
+              'motd.ubuntu.com'
+              'security.ubuntu.com'
+              'azure.archive.ubuntu.com'
+              'changelogs.ubuntu.com'
+              '*.blob.core.windows.net'
+              '*.blob.storage.azure.net'
             ]
             protocols: [
               {
@@ -91,12 +154,24 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
             sourceAddresses: [
               '*'
             ]
-            fqdnTags: []
-            webCategories: []
-            targetUrls: []
-            terminateTLS: false
-            destinationAddresses: []
-            sourceIpGroups: []
+          }
+          {
+            name: 'ubuntu'
+            ruleType: 'ApplicationRule'
+            targetFqdns: [
+              'security.ubuntu.com'
+              'azure.archive.ubuntu.com'
+              'changelogs.ubuntu.com'
+            ]
+            protocols: [
+              {
+                port: 80
+                protocolType: 'Http'
+              }
+            ]
+            sourceAddresses: [
+              '*'
+            ]
           }
         ]
         
@@ -125,6 +200,42 @@ resource firewall 'Microsoft.Network/azureFirewalls@2021-08-01' = {
           subnet: {
             id: firewallSubnetId
           }
+        }
+      }
+    ]
+  }
+}
+
+resource fwDiags 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' =  {
+  scope: firewall
+  name: 'fwDiags'
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      {
+        category: 'AzureFirewallApplicationRule'
+        enabled: true
+        retentionPolicy: {
+          days: 10
+          enabled: false
+        }
+      }
+      {
+        category: 'AzureFirewallNetworkRule'
+        enabled: true
+        retentionPolicy: {
+          days: 10
+          enabled: false
+        }
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+        retentionPolicy: {
+          enabled: false
+          days: 0
         }
       }
     ]

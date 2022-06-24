@@ -14,6 +14,15 @@ resource spoke_rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   location : resourceGroupLocation
 }
 
+module logging 'logging.bicep' = {
+  name: '${resourcePrefix}-spoke-logging'
+  scope: spoke_rg
+  params: {
+    resourcePrefix:  '${resourcePrefix}-spoke'
+    resourceGroupLocation: resourceGroupLocation
+  }
+}
+
 // NETWORK
 
 module hub_network 'hub-network.bicep' = {
@@ -22,6 +31,7 @@ module hub_network 'hub-network.bicep' = {
   params: {
     resourcePrefix:  resourcePrefix
     resourceGroupLocation: resourceGroupLocation
+    logAnalyticsWorkspaceId: logging.outputs.logAnalyticsWorkspaceId
   }
 }
 
@@ -60,6 +70,23 @@ module spoke_to_hub_peering 'vnetpeering.bicep' = {
     allowGatewayTransit : true
   }
   dependsOn: [ hub_to_spoke_peering ]
+}
+
+
+
+module containerappenvironment 'containerappenvironment.bicep' = {
+  name: '${resourcePrefix}-spoke-cae'
+  scope: spoke_rg
+  params: {
+    resourcePrefix:  '${resourcePrefix}-spoke'
+    resourceGroupLocation: resourceGroupLocation
+    containerAppsRuntimeSubnetId: spoke_network.outputs.containerAppsRuntimeSubnetId
+    containerAppsInfraSubnetId:  spoke_network.outputs.containerAppsInfraSubnetId
+    AIConnectionString: logging.outputs.AIConnectionString
+    AIInstrumentationKey:  logging.outputs.AIInstrumentationKey
+    logAnalyticsCustomerId: logging.outputs.logAnalyticsCustomerId
+    logAnalyticsSharedKey: logging.outputs.logAnalyticsSharedKey
+  }
 }
 
 

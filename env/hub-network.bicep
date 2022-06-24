@@ -7,6 +7,7 @@ param hubVnetAddressSpace string = '192.168.0.0/21'
 param firewallSubnetAddressSpace string = '192.168.0.0/24'
 param vpnSubnetAddressSpace string = '192.168.1.0/24'
 param apimSubnetAddressSpace string = '192.168.2.0/24'
+param logAnalyticsWorkspaceId string
 
 
 resource hub_vnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
@@ -47,6 +48,7 @@ module firewall_deploy 'firewall.bicep' = {
     resourcePrefix:  '${resourcePrefix}-firewall'
     resourceGroupLocation: resourceGroupLocation
     firewallSubnetId: hub_vnet.properties.subnets[0].id
+    logAnalyticsWorkspaceId: logAnalyticsWorkspaceId
   }
 }
 

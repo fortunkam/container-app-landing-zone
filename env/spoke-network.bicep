@@ -34,7 +34,7 @@ module nsg 'nsg.bicep' = {
     resourcePrefix:  spokeResourcePrefix
     resourceGroupLocation: resourceGroupLocation
     containerAppsRuntimeSubnetAddressSpace: containerAppsRuntimeSubnetAddressSpace
-    containerAppsInfraSubnetAddressSpace: containerAppsRuntimeSubnetAddressSpace
+    containerAppsInfraSubnetAddressSpace: containerAppsInfraSubnetAddressSpace
   }
 }
 
@@ -77,10 +77,13 @@ resource spoke_vnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
   }
 }
 
+
+
 output vnetName string = spoke_vnet.name
 output vnetId string =spoke_vnet.id
-output containerAppsRuntimeSubnetId string = spoke_vnet.properties.subnets[0].id
-output containerAppsInfraSubnetId string = spoke_vnet.properties.subnets[1].id
+//Looks like subnets are returned alphabetically so Infra is 0, Runtime is 1
+output containerAppsRuntimeSubnetId string = spoke_vnet.properties.subnets[1].id
+output containerAppsInfraSubnetId string = spoke_vnet.properties.subnets[0].id
 
 
 
