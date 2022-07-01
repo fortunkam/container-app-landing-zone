@@ -1,7 +1,6 @@
 param resourcePrefix string
 param resourceGroupLocation string = resourceGroup().location
 
-param containerAppsRuntimeSubnetAddressSpace string
 param containerAppsInfraSubnetAddressSpace string
 
 
@@ -10,19 +9,6 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = {
   location: resourceGroupLocation
   properties: {
     securityRules: [
-      {
-        name: 'Inbound_to_runtime_subnet'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: containerAppsRuntimeSubnetAddressSpace
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 100
-          direction: 'Inbound'
-        }
-      }
       {
         name: 'inbound_to_infra_subnet'
         properties: {
@@ -33,6 +19,19 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = {
           destinationAddressPrefix: '*'
           access: 'Allow'
           priority: 110
+          direction: 'Inbound'
+        }
+      }
+      {
+        name: 'inbound_from_loadbalancer'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: 'AzureLoadBalancer'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 190
           direction: 'Inbound'
         }
       }
@@ -98,19 +97,6 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = {
           destinationAddressPrefix: '*'
           access: 'Allow'
           priority: 160
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'outbound_to_runtime_subnet'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: containerAppsRuntimeSubnetAddressSpace
-          access: 'Allow'
-          priority: 170
           direction: 'Outbound'
         }
       }

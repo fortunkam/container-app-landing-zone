@@ -1,7 +1,6 @@
 param resourcePrefix string
 param resourceGroupLocation string = resourceGroup().location
 
-param containerAppsRuntimeSubnetId string
 param containerAppsInfraSubnetId string
 param logAnalyticsCustomerId string
 param logAnalyticsSharedKey string
@@ -24,7 +23,6 @@ resource container_app_env 'Microsoft.App/managedEnvironments@2022-03-01' = {
     vnetConfiguration: {
       infrastructureSubnetId: containerAppsInfraSubnetId
       internal: true
-      //runtimeSubnetId: containerAppsRuntimeSubnetId
     }
     zoneRedundant: false
   }

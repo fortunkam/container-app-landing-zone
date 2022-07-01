@@ -1,5 +1,6 @@
 param resourcePrefix string
 param resourceGroupLocation string = resourceGroup().location
+param containerAppSubnetRange string
 
 var hubResourcePrefix = '${resourcePrefix}-hub'
 
@@ -49,6 +50,7 @@ module firewall_deploy 'firewall.bicep' = {
     resourceGroupLocation: resourceGroupLocation
     firewallSubnetId: hub_vnet.properties.subnets[0].id
     logAnalyticsWorkspaceId: logAnalyticsWorkspaceId
+    containerAppSubnetRange: containerAppSubnetRange
   }
 }
 

@@ -2,6 +2,7 @@ param resourcePrefix string
 param resourceGroupLocation string = resourceGroup().location
 param firewallSubnetId string
 param logAnalyticsWorkspaceId string
+param containerAppSubnetRange string
 
 resource ip 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
   name: '${resourcePrefix}-ip'
@@ -23,6 +24,10 @@ resource firewall_policy 'Microsoft.Network/firewallPolicies@2021-08-01' = {
       tier : 'Standard'
     }
     threatIntelMode: 'Alert'
+    threatIntelWhitelist: {
+      fqdns: []
+      ipAddresses: []
+    }
     dnsSettings: {
       enableProxy: true
     }
@@ -55,7 +60,7 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
               'UDP'
             ]
             sourceAddresses: [
-              '*'
+              containerAppSubnetRange
             ]
           }
           {
@@ -72,7 +77,7 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
               'TCP'
             ]
             sourceAddresses: [
-              '*'
+              containerAppSubnetRange
             ]
           }
           {
@@ -88,7 +93,7 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
               'UDP'
             ]
             sourceAddresses: [
-              '*'
+              containerAppSubnetRange
             ]
           }
           {
@@ -104,7 +109,27 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
               'TCP'
             ]
             sourceAddresses: [
-              '*'
+              containerAppSubnetRange
+            ]
+          }
+          {
+            name: 'acr-agentpool'
+            ruleType: 'NetworkRule'
+            ipProtocols: [
+              'TCP'
+            ]
+            sourceAddresses: [
+              containerAppSubnetRange
+            ]
+            destinationAddresses: [
+              'AzureKeyVault'
+              'Storage'
+              'EventHub'
+              'AzureActiveDirectory'
+              'AzureMonitor'
+            ]
+            destinationPorts: [
+              '443'
             ]
           }
         ]
@@ -119,29 +144,29 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
         priority: 200
         rules: [
           {
-            name: 'container-apps'
+            name: 'container-apps-aks-rules'
+            ruleType: 'ApplicationRule'
+            fqdnTags: [
+              'AzureKubernetesService'
+            ]
+            protocols: [
+              {
+                port: 443
+                protocolType: 'Https'
+              }
+              {
+                port: 80
+                protocolType: 'Http'
+              }
+            ]
+            sourceAddresses: [
+              containerAppSubnetRange
+            ]
+          }
+          {
+            name: 'container-apps-storage'
             ruleType: 'ApplicationRule'
             targetFqdns: [
-              '*.hcp.${resourceGroupLocation}.azmk8s.io'
-              'mcr.microsoft.com'
-              '*.data.mcr.microsoft.com'
-              'management.azure.com'
-              'login.microsoftonline.com'
-              'packages.microsoft.com'
-              'acs-mirror.azureedge.net'
-              'dc.services.visualstudio.com'
-              '*.ods.opinsights.azure.com'
-              '*.oms.opinsights.azure.com'
-              '*.monitoring.azure.com'
-              'vault.azure.net'
-              'data.policy.core.windows.net'
-              'store.policy.core.windows.net'
-              'dc.services.visualstudio.com'
-              '${resourceGroupLocation}.dp.kubernetesconfiguration.azure.com'
-              'motd.ubuntu.com'
-              'security.ubuntu.com'
-              'azure.archive.ubuntu.com'
-              'changelogs.ubuntu.com'
               '*.blob.core.windows.net'
               '*.blob.storage.azure.net'
             ]
@@ -152,18 +177,144 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
               }
             ]
             sourceAddresses: [
-              '*'
+              containerAppSubnetRange
             ]
           }
+          // {
+          //   name: 'container-apps'
+          //   ruleType: 'ApplicationRule'
+          //   targetFqdns: [
+          //     '*.hcp.${resourceGroupLocation}.azmk8s.io'
+          //     'mcr.microsoft.com'
+          //     '*.data.mcr.microsoft.com'
+          //     'management.azure.com'
+          //     'login.microsoftonline.com'
+          //     'packages.microsoft.com'
+          //     'acs-mirror.azureedge.net'
+          //     'dc.services.visualstudio.com'
+          //     '*.ods.opinsights.azure.com'
+          //     '*.oms.opinsights.azure.com'
+          //     '*.monitoring.azure.com'
+          //     'vault.azure.net'
+          //     'data.policy.core.windows.net'
+          //     'store.policy.core.windows.net'
+          //     'dc.services.visualstudio.com'
+          //     '${resourceGroupLocation}.dp.kubernetesconfiguration.azure.com'
+          //     'motd.ubuntu.com'
+          //     'security.ubuntu.com'
+          //     'azure.archive.ubuntu.com'
+          //     'changelogs.ubuntu.com'
+          //     '*.blob.core.windows.net'
+          //     '*.blob.storage.azure.net'
+          //   ]
+          //   protocols: [
+          //     {
+          //       port: 443
+          //       protocolType: 'Https'
+          //     }
+          //   ]
+          //   sourceAddresses: [
+          //     '*'
+          //   ]
+          // }
           {
             name: 'ubuntu'
             ruleType: 'ApplicationRule'
             targetFqdns: [
+              'motd.ubuntu.com'
               'security.ubuntu.com'
               'azure.archive.ubuntu.com'
               'changelogs.ubuntu.com'
             ]
             protocols: [
+              {
+                port: 80
+                protocolType: 'Http'
+              }
+              {
+                port: 443
+                protocolType: 'Https'
+              }
+            ]
+            sourceAddresses: [
+              containerAppSubnetRange
+            ]
+          }
+        ]
+        
+      }
+    ]
+  }
+}
+resource firewall_policy_allow 'Microsoft.Network/firewallPolicies@2021-08-01' = {
+  name: '${resourcePrefix}-policy-allow'
+  location: resourceGroupLocation
+  properties: {
+    sku: {
+      tier : 'Standard'
+    }
+    threatIntelMode: 'Alert'
+    threatIntelWhitelist: {
+      fqdns: []
+      ipAddresses: []
+    }
+    dnsSettings: {
+      enableProxy: true
+    }
+  }
+}
+
+resource firewall_policy_rules_allow 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2021-08-01' = {
+  name: '${resourcePrefix}-rules-allow'
+  parent: firewall_policy_allow
+  properties: {
+    priority: 100
+    ruleCollections: [
+      {
+        ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
+        name: 'allow-all-rules'
+        action: {
+          type: 'Allow'
+        }
+        rules: [
+          {
+            name: 'allow_all_network'
+            ruleType: 'NetworkRule'
+            destinationAddresses: [
+              '*'
+            ]
+            destinationPorts: [
+              '*'
+            ]
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+          }
+        ]
+        priority: 140
+      }
+      {
+        name: 'allow-all-applcation'
+        ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
+        action: {
+          type: 'Allow'
+        }
+        priority: 200
+        rules: [
+          {
+            name: 'allow_all_application'
+            ruleType: 'ApplicationRule'
+            targetFqdns: [
+              '*'
+            ]
+            protocols: [
+              {
+                port: 443
+                protocolType: 'Https'
+              }
               {
                 port: 80
                 protocolType: 'Http'
@@ -174,7 +325,6 @@ resource firewall_policy_rules 'Microsoft.Network/firewallPolicies/ruleCollectio
             ]
           }
         ]
-        
       }
     ]
   }
@@ -188,7 +338,7 @@ resource firewall 'Microsoft.Network/azureFirewalls@2021-08-01' = {
       tier: 'Standard'
     }
     firewallPolicy: {
-      id: firewall_policy.id
+      id: firewall_policy_allow.id
     }
     ipConfigurations: [
       {

@@ -3,6 +3,8 @@ targetScope = 'subscription'
 param resourcePrefix string = 'mfca'
 param resourceGroupLocation string = deployment().location
 
+var containerAppSubnetRange = '192.168.10.0/23'
+
 
 resource hub_rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name : '${resourcePrefix}-hub'
@@ -32,6 +34,7 @@ module hub_network 'hub-network.bicep' = {
     resourcePrefix:  resourcePrefix
     resourceGroupLocation: resourceGroupLocation
     logAnalyticsWorkspaceId: logging.outputs.logAnalyticsWorkspaceId
+    containerAppSubnetRange: containerAppSubnetRange
   }
 }
 
@@ -42,6 +45,7 @@ module spoke_network 'spoke-network.bicep' = {
     resourcePrefix:  resourcePrefix
     resourceGroupLocation: resourceGroupLocation
     firewallIpAddress: hub_network.outputs.firewall_ip_address
+    containerAppsInfraSubnetAddressSpace: containerAppSubnetRange
   }
 }
 
@@ -80,7 +84,6 @@ module containerappenvironment 'containerappenvironment.bicep' = {
   params: {
     resourcePrefix:  '${resourcePrefix}-spoke'
     resourceGroupLocation: resourceGroupLocation
-    containerAppsRuntimeSubnetId: spoke_network.outputs.containerAppsRuntimeSubnetId
     containerAppsInfraSubnetId:  spoke_network.outputs.containerAppsInfraSubnetId
     AIConnectionString: logging.outputs.AIConnectionString
     AIInstrumentationKey:  logging.outputs.AIInstrumentationKey
